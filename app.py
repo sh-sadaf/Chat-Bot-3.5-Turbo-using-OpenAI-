@@ -3,7 +3,7 @@ import openai
 import toml
 
 # Load secrets from the secrets.toml file
-secrets = toml.load("streamlit/secrets.toml")
+# secrets = toml.load("streamlit/secrets.toml")
 openai.api_key = secrets["OPENAI_API_KEY"]
 
 st.title("ChatGPT-like Chatbot")
