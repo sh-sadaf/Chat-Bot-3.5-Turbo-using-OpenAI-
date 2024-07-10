@@ -1,31 +1,54 @@
 import streamlit as st
-import openai
-import toml
+from openai import OpenAI
 
-# Load secrets from the secrets.toml file
-# secrets = toml.load("streamlit/secrets.toml")
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# Open Sidebar for password input
+password = st.sidebar.text_input("Enter your password", type="password")
 
-st.title("ChatGPT-like Chatbot")
+# Initialize the OpenAI client conditionally
+client = None
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Check if the correct password is entered
+if password == st.secrets["access_password"]:  # Access the password from secrets
+    client = OpenAI(api_key=st.secrets["openai_key"])
+    st.sidebar.success("Password accepted!")
+else:
+    st.sidebar.error("Please enter the correct password to access the OpenAI API key.")
 
-def generate_response(prompt):
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # or "gpt-4" if you have access
-        messages=[{"role": "user", "content": prompt}]
-    )
-    message = response['choices'][0]['message']['content'].strip()
-    return message
+# Set Title:
+st.title("📝 File Q&A with ChatGPT")
 
-st.header("Chat with the bot")
-user_input = st.text_input("You: ", "")
+# Upload the file:
+uploaded_file = st.file_uploader("Upload an article", type=("txt", "md"))
 
-if user_input:
-    st.session_state.messages.append(f"You: {user_input}")
-    bot_response = generate_response(user_input)
-    st.session_state.messages.append(f"Bot: {bot_response}")
+# Text input:
+question = st.text_input(
+    "Ask something about the article",
+    placeholder="Can you give me a short summary?",
+    disabled=not uploaded_file
+)
 
-for message in st.session_state.messages:
-    st.write(message)
+if uploaded_file and question:
+    if client:
+        # Parsing the text:
+        article = uploaded_file.read().decode()
+
+        # Prompting:
+        my_prompt = f"Here's an article: {article}\n\n{question}"
+
+        # ChatGPT Connection and API call:
+        try:
+            completion = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": my_prompt}
+                ]
+            )
+
+            # Display the response
+            st.write("### Answer")
+            st.write(completion.choices[0].message.content)
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+    else:
+        st.info("Please add your OpenAI API key to continue.")
